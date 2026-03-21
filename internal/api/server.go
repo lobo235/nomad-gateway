@@ -7,20 +7,42 @@ import (
 	"net/http"
 	"time"
 
+	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/lobo235/nomad-gateway/internal/nomad"
 )
 
+// nomadClient is the interface the Server uses to communicate with Nomad.
+// The concrete *nomad.Client satisfies this interface.
+type nomadClient interface {
+	Ping() error
+	ListJobs(prefix string) ([]*nomadapi.JobListStub, error)
+	GetJob(jobID string) (*nomadapi.Job, error)
+	GetJobSubmission(jobID string) (*nomadapi.JobSubmission, error)
+	SubmitJob(hclSpec string) (*nomadapi.JobRegisterResponse, error)
+	StopJob(jobID string, purge bool) (*nomad.StopJobResponse, error)
+	GetAllocInfo(allocID string) (*nomadapi.Allocation, error)
+	RestartAlloc(allocID, taskName string) error
+	GetJobVersions(jobID string) ([]*nomadapi.Job, error)
+	RevertJob(jobID string, version uint64) (*nomadapi.JobRegisterResponse, error)
+	ListNodePools() ([]*nomadapi.NodePool, error)
+	ListNodesInPool(poolName string) ([]*nomadapi.NodeListStub, error)
+	GetEvaluations(jobID string) ([]*nomadapi.Evaluation, error)
+	GetAllocations(jobID string) ([]*nomadapi.AllocationListStub, error)
+	GetAllocLogs(allocID, task, logType, origin string, limitBytes int64) (string, error)
+	WatchJobHealth(ctx context.Context, jobID string) (bool, error)
+}
+
 // Server holds the dependencies for the HTTP server.
 type Server struct {
-	nomad   *nomad.Client
+	nomad   nomadClient
 	apiKey  string
 	log     *slog.Logger
 	version string
 }
 
-func NewServer(nomadClient *nomad.Client, apiKey, version string, log *slog.Logger) *Server {
+func NewServer(client nomadClient, apiKey, version string, log *slog.Logger) *Server {
 	return &Server{
-		nomad:   nomadClient,
+		nomad:   client,
 		apiKey:  apiKey,
 		log:     log,
 		version: version,

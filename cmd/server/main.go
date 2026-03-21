@@ -16,14 +16,30 @@ import (
 var version = "dev"
 
 func main() {
+	// Bootstrap logger at INFO so we can log config errors before cfg is loaded.
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	log.Info("starting nomad-gateway", "version", version)
 
 	cfg, err := config.Load()
 	if err != nil {
 		log.Error("config error", "error", err)
 		os.Exit(1)
 	}
+
+	// Re-create logger at the configured level.
+	var logLevel slog.Level
+	switch cfg.LogLevel {
+	case "debug":
+		logLevel = slog.LevelDebug
+	case "warn":
+		logLevel = slog.LevelWarn
+	case "error":
+		logLevel = slog.LevelError
+	default:
+		logLevel = slog.LevelInfo
+	}
+	log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+
+	log.Info("starting nomad-gateway", "version", version, "log_level", cfg.LogLevel)
 
 	nomadClient, err := nomad.NewClient(cfg.NomadAddr, cfg.NomadToken, log)
 	if err != nil {

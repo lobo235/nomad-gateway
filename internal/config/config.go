@@ -12,6 +12,7 @@ type Config struct {
 	NomadToken    string
 	GatewayAPIKey string
 	Port          string
+	LogLevel      string
 }
 
 func Load() (*Config, error) {
@@ -23,6 +24,7 @@ func Load() (*Config, error) {
 		NomadToken:    os.Getenv("NOMAD_TOKEN"),
 		GatewayAPIKey: os.Getenv("GATEWAY_API_KEY"),
 		Port:          os.Getenv("PORT"),
+		LogLevel:      os.Getenv("LOG_LEVEL"),
 	}
 
 	if cfg.NomadAddr == "" {
@@ -36,6 +38,14 @@ func Load() (*Config, error) {
 	}
 	if cfg.Port == "" {
 		cfg.Port = "8080"
+	}
+	switch cfg.LogLevel {
+	case "debug", "info", "warn", "error":
+		// valid
+	case "":
+		cfg.LogLevel = "info"
+	default:
+		return nil, fmt.Errorf("LOG_LEVEL must be one of: debug, info, warn, error")
 	}
 
 	return cfg, nil

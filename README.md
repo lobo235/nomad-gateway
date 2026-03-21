@@ -26,6 +26,7 @@ cp .env.example .env
 | `NOMAD_TOKEN` | yes | — | Nomad ACL token |
 | `GATEWAY_API_KEY` | yes | — | Bearer token callers must present to this API |
 | `PORT` | no | `8080` | Port to listen on |
+| `LOG_LEVEL` | no | `info` | Log verbosity: `debug`, `info`, `warn`, `error` |
 
 In production, secrets are injected by Nomad's Vault Workload Identity — the app never talks to Vault directly.
 

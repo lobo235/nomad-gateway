@@ -69,6 +69,7 @@ All config via ENV vars. Loaded from `.env` file in development (via `godotenv`;
 | `NOMAD_TOKEN` | yes | — | Nomad ACL token |
 | `GATEWAY_API_KEY` | yes | — | Bearer token for callers of this API |
 | `PORT` | no | `8080` | Listen port |
+| `LOG_LEVEL` | no | `info` | Log verbosity: `debug`, `info`, `warn`, `error` |
 
 In production, secrets are injected by Nomad's Vault Workload Identity — the app itself never talks to Vault.
 
