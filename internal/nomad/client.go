@@ -13,12 +13,14 @@ import (
 
 const defaultHealthPollInterval = 5 * time.Second
 
+// Client wraps the Nomad API client with helper methods for job and allocation management.
 type Client struct {
-	nomad            *api.Client
-	log              *slog.Logger
+	nomad              *api.Client
+	log                *slog.Logger
 	healthPollInterval time.Duration
 }
 
+// NewClient creates a new Client configured to talk to the Nomad agent at addr using the given ACL token.
 func NewClient(addr, token string, log *slog.Logger) (*Client, error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = addr
@@ -181,7 +183,8 @@ func (c *Client) GetAllocations(jobID string) ([]*api.AllocationListStub, error)
 	return allocs, nil
 }
 
-const DefaultLogLimitBytes = 50 * 1024 // 50KB
+// DefaultLogLimitBytes is the default byte limit for log retrieval (50KB).
+const DefaultLogLimitBytes = 50 * 1024
 
 // GetAllocLogs returns task logs for the given allocation.
 // logType is "stdout" or "stderr". origin is "start" or "end".

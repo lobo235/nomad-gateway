@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config holds all runtime configuration loaded from environment variables.
 type Config struct {
 	NomadAddr     string
 	NomadToken    string
@@ -15,6 +16,7 @@ type Config struct {
 	LogLevel      string
 }
 
+// Load reads configuration from environment variables, applying defaults and validating required fields.
 func Load() (*Config, error) {
 	// Load .env if present — ignore error if file doesn't exist
 	_ = godotenv.Load()

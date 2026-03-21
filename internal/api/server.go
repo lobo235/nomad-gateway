@@ -8,6 +8,7 @@ import (
 	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
+
 	"github.com/lobo235/nomad-gateway/internal/nomad"
 )
 
@@ -40,6 +41,7 @@ type Server struct {
 	version string
 }
 
+// NewServer creates a Server wired with the given Nomad client, API key, version string, and logger.
 func NewServer(client nomadClient, apiKey, version string, log *slog.Logger) *Server {
 	return &Server{
 		nomad:   client,

@@ -291,7 +291,7 @@ func (s *Server) getLogsHandler() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(logs))
+		_, _ = w.Write([]byte(logs))
 	}
 }
 
@@ -337,4 +337,3 @@ func (s *Server) watchJobHealthHandler() http.HandlerFunc {
 		writeJSON(w, http.StatusOK, jobHealthResponse{JobID: jobID, Healthy: true})
 	}
 }
-

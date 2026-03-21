@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	nomadapi "github.com/hashicorp/nomad/api"
+
 	"github.com/lobo235/nomad-gateway/internal/api"
 	"github.com/lobo235/nomad-gateway/internal/nomad"
 )
@@ -25,22 +26,22 @@ func discardLogger() *slog.Logger {
 
 // mockNomad is a configurable mock satisfying the nomadClient interface.
 type mockNomad struct {
-	pingFunc          func() error
-	listJobsFunc      func(prefix string) ([]*nomadapi.JobListStub, error)
-	getJobFunc        func(jobID string) (*nomadapi.Job, error)
-	getJobSubFunc     func(jobID string) (*nomadapi.JobSubmission, error)
-	submitJobFunc     func(hclSpec string) (*nomadapi.JobRegisterResponse, error)
-	stopJobFunc       func(jobID string, purge bool) (*nomad.StopJobResponse, error)
+	pingFunc           func() error
+	listJobsFunc       func(prefix string) ([]*nomadapi.JobListStub, error)
+	getJobFunc         func(jobID string) (*nomadapi.Job, error)
+	getJobSubFunc      func(jobID string) (*nomadapi.JobSubmission, error)
+	submitJobFunc      func(hclSpec string) (*nomadapi.JobRegisterResponse, error)
+	stopJobFunc        func(jobID string, purge bool) (*nomad.StopJobResponse, error)
 	getAllocInfoFunc   func(allocID string) (*nomadapi.Allocation, error)
-	restartAllocFunc  func(allocID, taskName string) error
+	restartAllocFunc   func(allocID, taskName string) error
 	getJobVersionsFunc func(jobID string) ([]*nomadapi.Job, error)
-	revertJobFunc     func(jobID string, version uint64) (*nomadapi.JobRegisterResponse, error)
-	listNodePoolsFunc func() ([]*nomadapi.NodePool, error)
-	listNodesFunc     func(poolName string) ([]*nomadapi.NodeListStub, error)
-	getEvalsFunc      func(jobID string) ([]*nomadapi.Evaluation, error)
+	revertJobFunc      func(jobID string, version uint64) (*nomadapi.JobRegisterResponse, error)
+	listNodePoolsFunc  func() ([]*nomadapi.NodePool, error)
+	listNodesFunc      func(poolName string) ([]*nomadapi.NodeListStub, error)
+	getEvalsFunc       func(jobID string) ([]*nomadapi.Evaluation, error)
 	getAllocsFunc      func(jobID string) ([]*nomadapi.AllocationListStub, error)
-	getLogsFunc       func(allocID, task, logType, origin string, limitBytes int64) (string, error)
-	watchHealthFunc   func(ctx context.Context, jobID string) (bool, error)
+	getLogsFunc        func(allocID, task, logType, origin string, limitBytes int64) (string, error)
+	watchHealthFunc    func(ctx context.Context, jobID string) (bool, error)
 }
 
 func (m *mockNomad) Ping() error {
