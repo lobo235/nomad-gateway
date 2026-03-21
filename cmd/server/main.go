@@ -17,6 +17,7 @@ var version = "dev"
 
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	log.Info("starting nomad-gateway", "version", version)
 
 	cfg, err := config.Load()
 	if err != nil {
