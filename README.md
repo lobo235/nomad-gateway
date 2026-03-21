@@ -66,8 +66,8 @@ Unauthenticated. Verifies the service can reach Nomad. Used for container health
 
 ```bash
 curl http://localhost:8080/health
-# 200: {"status":"ok"}
-# 503: {"status":"unavailable"}
+# 200: {"status":"ok","version":"v1.0.1"}
+# 503: {"status":"unavailable","version":"v1.0.1"}
 ```
 
 ---
@@ -316,6 +316,14 @@ Then generate and store the token:
 ```bash
 nomad acl token create -name="nomad-gateway-token" -policy="nomad-gateway"
 ```
+
+---
+
+## Releases
+
+This project uses [Semantic Versioning](https://semver.org/). Docker images are published to `ghcr.io/lobo235/nomad-gateway` on every push to `main` (`latest` + short SHA) and on every `v*` tag (`v1.0.1`, `v1.0`, `latest`).
+
+The running version is always visible via `GET /health`.
 
 ---
 

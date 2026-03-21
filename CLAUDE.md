@@ -41,7 +41,8 @@ nomad-gateway/
 │   └── server/
 │       └── main.go           # entry point
 ├── deploy/
-│   └── nomad-gateway.policy.hcl  # Nomad ACL policy
+│   ├── nomad-gateway.hcl             # Nomad job spec
+│   └── nomad-gateway.policy.hcl     # Nomad ACL policy
 └── internal/
     ├── config/
     │   └── config.go         # ENV var loading & validation
@@ -50,7 +51,7 @@ nomad-gateway/
     │   └── client_test.go    # unit tests (mock httptest server)
     └── api/
         ├── server.go         # HTTP mux + Run()
-        ├── middleware.go     # Bearer token auth
+        ├── middleware.go     # Bearer token auth + request logging
         ├── handlers.go       # all route handlers
         ├── errors.go         # writeError / writeJSON helpers
         └── health.go         # GET /health (unauthenticated)
@@ -78,7 +79,8 @@ In production, secrets are injected by Nomad's Vault Workload Identity — the a
 - **HTTP router**: Standard `net/http` with Go 1.22+ path parameters — no external router dependency.
 - **Nomad client**: `github.com/hashicorp/nomad/api` official Go client.
 - **Auth**: `Authorization: Bearer <token>` middleware using `crypto/subtle.ConstantTimeCompare`.
-- **Logging**: `log/slog` with JSON handler at INFO level.
+- **Logging**: `log/slog` with JSON handler at INFO level. Version logged on startup. Every request logged via `requestLogger` middleware (method, path, status, duration_ms, remote_addr).
+- **Versioning**: SemVer. Version embedded at build time via `-ldflags "-X main.version=<ver>"`, defaults to `"dev"`. Exposed in `GET /health` response.
 - **Graceful shutdown**: `signal.NotifyContext` on SIGINT/SIGTERM with 30s drain.
 - **WriteTimeout**: `10m15s` — must exceed the maximum health-watch timeout (default 5m).
 
@@ -90,7 +92,7 @@ All routes except `/health` require `Authorization: Bearer <GATEWAY_API_KEY>`.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/health` | Unauthenticated; verifies Nomad connectivity |
+| `GET` | `/health` | Unauthenticated; verifies Nomad connectivity; returns `version` field |
 | `GET` | `/jobs` | `?filter=<prefix>` optional |
 | `GET` | `/jobs/{jobID}` | |
 | `GET` | `/jobs/{jobID}/spec` | Returns original HCL/JSON submission (Nomad 1.6+) |
@@ -173,11 +175,32 @@ Required capabilities:
 
 ---
 
+## Versioning & Releases
+
+SemVer (`MAJOR.MINOR.PATCH`). To cut a release:
+
+```bash
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+This triggers the Docker workflow, which builds and pushes:
+- `ghcr.io/lobo235/nomad-gateway:v1.2.3`
+- `ghcr.io/lobo235/nomad-gateway:v1.2`
+- `ghcr.io/lobo235/nomad-gateway:latest`
+- `ghcr.io/lobo235/nomad-gateway:<short-sha>`
+
+The version is embedded in the binary via `-ldflags "-X main.version=v1.2.3"` and returned by `GET /health`.
+
+---
+
 ## Docker
 
 ```bash
-# Build
+# Build (version defaults to "dev")
 docker build -t nomad-gateway .
+
+# Build with explicit version
+docker build --build-arg VERSION=v1.2.3 -t nomad-gateway .
 
 # Run
 docker run --env-file .env -p 8080:8080 nomad-gateway
