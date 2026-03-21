@@ -12,16 +12,18 @@ import (
 
 // Server holds the dependencies for the HTTP server.
 type Server struct {
-	nomad  *nomad.Client
-	apiKey string
-	log    *slog.Logger
+	nomad   *nomad.Client
+	apiKey  string
+	log     *slog.Logger
+	version string
 }
 
-func NewServer(nomadClient *nomad.Client, apiKey string, log *slog.Logger) *Server {
+func NewServer(nomadClient *nomad.Client, apiKey, version string, log *slog.Logger) *Server {
 	return &Server{
-		nomad:  nomadClient,
-		apiKey: apiKey,
-		log:    log,
+		nomad:   nomadClient,
+		apiKey:  apiKey,
+		log:     log,
+		version: version,
 	}
 }
 

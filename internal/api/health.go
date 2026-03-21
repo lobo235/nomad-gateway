@@ -5,7 +5,8 @@ import (
 )
 
 type healthResponse struct {
-	Status string `json:"status"`
+	Status  string `json:"status"`
+	Version string `json:"version"`
 }
 
 // healthHandler returns a handler for GET /health.
@@ -15,9 +16,9 @@ func (s *Server) healthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := s.nomad.Ping(); err != nil {
 			s.log.Error("nomad ping failed", "error", err)
-			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable"})
+			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", Version: s.version})
 			return
 		}
-		writeJSON(w, http.StatusOK, healthResponse{Status: "ok"})
+		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", Version: s.version})
 	}
 }

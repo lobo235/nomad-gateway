@@ -12,6 +12,9 @@ import (
 	"github.com/lobo235/nomad-gateway/internal/nomad"
 )
 
+// version is set at build time via -ldflags "-X main.version=<value>".
+var version = "dev"
+
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
@@ -27,7 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := api.NewServer(nomadClient, cfg.GatewayAPIKey, log)
+	srv := api.NewServer(nomadClient, cfg.GatewayAPIKey, version, log)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
