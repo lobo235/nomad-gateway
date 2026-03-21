@@ -51,7 +51,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /jobs/{jobID}", auth(http.HandlerFunc(s.stopJobHandler())))
 	mux.Handle("GET /jobs/{jobID}/health", auth(http.HandlerFunc(s.watchJobHealthHandler())))
 
-	return mux
+	return requestLogger(s.log)(mux)
 }
 
 // Run starts the HTTP server and blocks until ctx is cancelled, then shuts down gracefully.
