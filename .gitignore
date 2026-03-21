@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# Build output
+nomad-gateway
+/dist/
+
+# Go
+vendor/
+
+# IDE
+.vscode/
+.idea/

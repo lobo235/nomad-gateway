@@ -1,0 +1,22 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o nomad-gateway ./cmd/server
+
+# ----
+
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+COPY --from=builder /build/nomad-gateway .
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/nomad-gateway"]
