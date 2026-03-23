@@ -46,7 +46,7 @@ job "nomad-gateway" {
 
     vault {
       cluster     = "default"
-      change_mode = "noop"
+      change_mode = "restart"
     }
 
     task "nomad-gateway" {
@@ -57,11 +57,12 @@ job "nomad-gateway" {
         ports = ["http"]
       }
 
-      # Secrets pulled from Vault at secret/data/nomad-gateway
       template {
         data = <<EOF
-NOMAD_TOKEN={{ with secret "secret/data/nomad-gateway" }}{{ .Data.data.nomad_token }}{{ end }}
-GATEWAY_API_KEY={{ with secret "secret/data/nomad-gateway" }}{{ .Data.data.api_key }}{{ end }}
+{{ with secret "kv/data/nomad/default/nomad-gateway" }}
+NOMAD_TOKEN={{ .Data.data.nomad_token }}
+GATEWAY_API_KEY={{ .Data.data.gateway_api_key }}
+{{ end }}
 EOF
         destination = "secrets/nomad-gateway.env"
         env         = true
