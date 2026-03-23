@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Correct Vault secret path in deploy spec to use `kv/data/nomad/default/nomad-gateway`
+
 ## [v1.1.0] - 2026-03-21
 
 ### Added
