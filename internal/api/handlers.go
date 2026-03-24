@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lobo235/nomad-gateway/internal/nomad"
@@ -287,6 +288,17 @@ func (s *Server) getLogsHandler() http.HandlerFunc {
 			s.log.Error("get logs failed", "job_id", jobID, "alloc_id", allocID, "error", err)
 			writeError(w, http.StatusBadGateway, "nomad_error", err.Error())
 			return
+		}
+
+		// Optional: filter log lines by grep pattern.
+		if pattern := r.URL.Query().Get("grep"); pattern != "" {
+			var filtered []string
+			for _, line := range strings.Split(logs, "\n") {
+				if strings.Contains(line, pattern) {
+					filtered = append(filtered, line)
+				}
+			}
+			logs = strings.Join(filtered, "\n")
 		}
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
