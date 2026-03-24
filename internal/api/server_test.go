@@ -490,3 +490,417 @@ func TestWatchJobHealth_Healthy(t *testing.T) {
 		t.Errorf("job_id = %q, want my-job", body.JobID)
 	}
 }
+
+func TestWatchJobHealth_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		watchHealthFunc: func(ctx context.Context, jobID string) (bool, error) {
+			return false, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/health", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /jobs/{jobID} ---
+
+func TestGetJob_OK(t *testing.T) {
+	jobID := "my-job"
+	srv := newTestServer(t, &mockNomad{
+		getJobFunc: func(id string) (*nomadapi.Job, error) {
+			return &nomadapi.Job{ID: &jobID}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestGetJob_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getJobFunc: func(id string) (*nomadapi.Job, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /jobs/{jobID}/spec ---
+
+func TestGetJobSpec_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getJobSubFunc: func(jobID string) (*nomadapi.JobSubmission, error) {
+			return &nomadapi.JobSubmission{Source: `job "test" {}`, Format: "hcl2"}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/spec", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestGetJobSpec_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getJobSubFunc: func(jobID string) (*nomadapi.JobSubmission, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/spec", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /jobs/{jobID}/allocations/{allocID} ---
+
+func TestGetAllocInfo_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getAllocInfoFunc: func(allocID string) (*nomadapi.Allocation, error) {
+			return &nomadapi.Allocation{ID: allocID}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestGetAllocInfo_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getAllocInfoFunc: func(allocID string) (*nomadapi.Allocation, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- POST /jobs/{jobID}/allocations/{allocID}/restart ---
+
+func TestRestartAlloc_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		restartAllocFunc: func(allocID, taskName string) error {
+			return nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodPost, srv.URL+"/jobs/my-job/allocations/alloc-1/restart?task=web", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestRestartAlloc_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		restartAllocFunc: func(allocID, taskName string) error {
+			return errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodPost, srv.URL+"/jobs/my-job/allocations/alloc-1/restart", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+func TestRestartAlloc_TaskParam(t *testing.T) {
+	var gotTask string
+	srv := newTestServer(t, &mockNomad{
+		restartAllocFunc: func(allocID, taskName string) error {
+			gotTask = taskName
+			return nil
+		},
+	})
+	defer srv.Close()
+	doRequest(t, http.MethodPost, srv.URL+"/jobs/my-job/allocations/alloc-1/restart?task=mc-server", "", authHeader())
+	if gotTask != "mc-server" {
+		t.Errorf("task = %q, want mc-server", gotTask)
+	}
+}
+
+// --- GET /jobs/{jobID}/versions ---
+
+func TestGetJobVersions_OK(t *testing.T) {
+	jobID := "my-job"
+	v0 := uint64(0)
+	srv := newTestServer(t, &mockNomad{
+		getJobVersionsFunc: func(id string) ([]*nomadapi.Job, error) {
+			return []*nomadapi.Job{{ID: &jobID, Version: &v0}}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/versions", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestGetJobVersions_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getJobVersionsFunc: func(id string) ([]*nomadapi.Job, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/versions", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /node-pools ---
+
+func TestListNodePools_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		listNodePoolsFunc: func() ([]*nomadapi.NodePool, error) {
+			return []*nomadapi.NodePool{{Name: "default"}}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/node-pools", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestListNodePools_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		listNodePoolsFunc: func() ([]*nomadapi.NodePool, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/node-pools", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /node-pools/{poolName}/nodes ---
+
+func TestListNodesInPool_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		listNodesFunc: func(poolName string) ([]*nomadapi.NodeListStub, error) {
+			return []*nomadapi.NodeListStub{{ID: "node-1", NodePool: poolName}}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/node-pools/default/nodes", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestListNodesInPool_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		listNodesFunc: func(poolName string) ([]*nomadapi.NodeListStub, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/node-pools/default/nodes", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+func TestListNodesInPool_PoolNamePropagated(t *testing.T) {
+	var gotPool string
+	srv := newTestServer(t, &mockNomad{
+		listNodesFunc: func(poolName string) ([]*nomadapi.NodeListStub, error) {
+			gotPool = poolName
+			return nil, nil
+		},
+	})
+	defer srv.Close()
+	doRequest(t, http.MethodGet, srv.URL+"/node-pools/high-memory/nodes", "", authHeader())
+	if gotPool != "high-memory" {
+		t.Errorf("pool = %q, want high-memory", gotPool)
+	}
+}
+
+// --- GET /jobs/{jobID}/evaluations ---
+
+func TestGetEvaluations_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getEvalsFunc: func(jobID string) ([]*nomadapi.Evaluation, error) {
+			return []*nomadapi.Evaluation{{ID: "eval-1", JobID: jobID}}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/evaluations", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestGetEvaluations_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getEvalsFunc: func(jobID string) ([]*nomadapi.Evaluation, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/evaluations", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /jobs/{jobID}/allocations ---
+
+func TestGetAllocations_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getAllocsFunc: func(jobID string) ([]*nomadapi.AllocationListStub, error) {
+			return []*nomadapi.AllocationListStub{{ID: "alloc-1"}}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}
+
+func TestGetAllocations_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getAllocsFunc: func(jobID string) ([]*nomadapi.AllocationListStub, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- POST /jobs (submit) upstream error ---
+
+func TestSubmitJob_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		submitJobFunc: func(hclSpec string) (*nomadapi.JobRegisterResponse, error) {
+			return nil, errors.New("parse error")
+		},
+	})
+	defer srv.Close()
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/jobs", bytes.NewBufferString(`job "test" {}`))
+	req.Header.Set("Authorization", authHeader())
+	resp, _ := http.DefaultClient.Do(req)
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- DELETE /jobs/{jobID} upstream error ---
+
+func TestStopJob_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		stopJobFunc: func(jobID string, purge bool) (*nomad.StopJobResponse, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodDelete, srv.URL+"/jobs/my-job", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- POST /jobs/{jobID}/revert upstream error ---
+
+func TestRevertJob_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		revertJobFunc: func(jobID string, version uint64) (*nomadapi.JobRegisterResponse, error) {
+			return nil, errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodPost, srv.URL+"/jobs/my-job/revert?version=1", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /jobs/{jobID}/allocations/{allocID}/logs upstream error ---
+
+func TestGetLogs_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		getLogsFunc: func(allocID, task, logType, origin string, limitBytes int64) (string, error) {
+			return "", errors.New("nomad unavailable")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1/logs?task=web", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+// --- GET /jobs/{jobID}/allocations/{allocID}/logs defaults ---
+
+func TestGetLogs_Defaults(t *testing.T) {
+	var gotLogType, gotOrigin string
+	var gotLimit int64
+	srv := newTestServer(t, &mockNomad{
+		getLogsFunc: func(allocID, task, logType, origin string, limitBytes int64) (string, error) {
+			gotLogType = logType
+			gotOrigin = origin
+			gotLimit = limitBytes
+			return "output", nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1/logs?task=web", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+	if gotLogType != "stdout" {
+		t.Errorf("logType = %q, want stdout", gotLogType)
+	}
+	if gotOrigin != "end" {
+		t.Errorf("origin = %q, want end", gotOrigin)
+	}
+	if gotLimit != int64(nomad.DefaultLogLimitBytes) {
+		t.Errorf("limit = %d, want %d", gotLimit, nomad.DefaultLogLimitBytes)
+	}
+}
+
+func TestGetLogs_StderrOriginStart(t *testing.T) {
+	var gotLogType, gotOrigin string
+	srv := newTestServer(t, &mockNomad{
+		getLogsFunc: func(allocID, task, logType, origin string, limitBytes int64) (string, error) {
+			gotLogType = logType
+			gotOrigin = origin
+			return "error output", nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1/logs?task=web&type=stderr&origin=start", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+	if gotLogType != "stderr" {
+		t.Errorf("logType = %q, want stderr", gotLogType)
+	}
+	if gotOrigin != "start" {
+		t.Errorf("origin = %q, want start", gotOrigin)
+	}
+}
+
+func TestGetLogs_InvalidLimitNotANumber(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1/logs?task=web&limit=abc", "", authHeader())
+	assertStatus(t, resp, http.StatusBadRequest)
+	assertErrorCode(t, resp, "invalid_param")
+}
+
+// --- DELETE /jobs/{jobID} default purge ---
+
+func TestStopJob_DefaultPurge(t *testing.T) {
+	var gotPurge bool
+	srv := newTestServer(t, &mockNomad{
+		stopJobFunc: func(jobID string, purge bool) (*nomad.StopJobResponse, error) {
+			gotPurge = purge
+			return &nomad.StopJobResponse{EvalID: "eval-1"}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodDelete, srv.URL+"/jobs/my-job", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+	if gotPurge {
+		t.Error("expected purge=false by default")
+	}
+}
+
+// --- GET /jobs/{jobID}/health default timeout ---
+
+func TestWatchJobHealth_DefaultTimeout(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		watchHealthFunc: func(ctx context.Context, jobID string) (bool, error) {
+			return true, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/health", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+}

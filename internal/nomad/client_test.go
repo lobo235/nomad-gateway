@@ -630,5 +630,432 @@ func TestWatchJobHealth_TerminalPlusHealthy(t *testing.T) {
 	}
 }
 
+// --- Error path tests ---
+
+func TestListJobs_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.ListJobs("")
+	if err == nil {
+		t.Error("ListJobs() expected error on 500, got nil")
+	}
+}
+
+func TestGetAllocInfo_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetAllocInfo("nonexistent")
+	if err == nil {
+		t.Error("GetAllocInfo() expected error on 404, got nil")
+	}
+}
+
+func TestRestartAlloc_InfoError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	err := c.RestartAlloc("nonexistent", "task")
+	if err == nil {
+		t.Error("RestartAlloc() expected error when allocation lookup fails, got nil")
+	}
+}
+
+func TestGetJobVersions_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetJobVersions("nonexistent")
+	if err == nil {
+		t.Error("GetJobVersions() expected error on 500, got nil")
+	}
+}
+
+func TestRevertJob_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.RevertJob("nonexistent", 0)
+	if err == nil {
+		t.Error("RevertJob() expected error on 500, got nil")
+	}
+}
+
+func TestListNodePools_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.ListNodePools()
+	if err == nil {
+		t.Error("ListNodePools() expected error on 500, got nil")
+	}
+}
+
+func TestListNodesInPool_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.ListNodesInPool("nonexistent")
+	if err == nil {
+		t.Error("ListNodesInPool() expected error on 500, got nil")
+	}
+}
+
+func TestGetEvaluations_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetEvaluations("nonexistent")
+	if err == nil {
+		t.Error("GetEvaluations() expected error on 500, got nil")
+	}
+}
+
+func TestGetAllocations_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetAllocations("nonexistent")
+	if err == nil {
+		t.Error("GetAllocations() expected error on 500, got nil")
+	}
+}
+
+func TestGetAllocLogs_AllocInfoError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetAllocLogs("nonexistent", "task", "stdout", "end", DefaultLogLimitBytes)
+	if err == nil {
+		t.Error("GetAllocLogs() expected error when allocation lookup fails, got nil")
+	}
+}
+
+func TestGetAllocLogs_OriginStart(t *testing.T) {
+	allocID := "alloc-abc123"
+	taskName := "mc-survival"
+	wantLog := "Starting server\n"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v1/allocation/" + allocID:
+			json.NewEncoder(w).Encode(&api.Allocation{
+				ID:        allocID,
+				NodeID:    "node-1",
+				Namespace: "default",
+			})
+		case "/v1/node/node-1":
+			json.NewEncoder(w).Encode(&api.Node{
+				ID:       "node-1",
+				HTTPAddr: "127.0.0.1:1",
+			})
+		case "/v1/client/fs/logs/" + allocID:
+			frame := api.StreamFrame{Data: []byte(wantLog)}
+			json.NewEncoder(w).Encode(frame)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	// origin=start with limitBytes=0 — should read from beginning with offset=0
+	logs, err := c.GetAllocLogs(allocID, taskName, "stdout", "start", 0)
+	if err != nil {
+		t.Fatalf("GetAllocLogs(origin=start) error = %v", err)
+	}
+	if logs != wantLog {
+		t.Errorf("logs = %q, want %q", logs, wantLog)
+	}
+}
+
+func TestGetJobSubmission_InfoError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetJobSubmission("nonexistent")
+	if err == nil {
+		t.Error("GetJobSubmission() expected error when job lookup fails, got nil")
+	}
+}
+
+func TestGetJobSubmission_SubmissionError(t *testing.T) {
+	jobID := "test-job"
+	version := uint64(1)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v1/job/" + jobID:
+			json.NewEncoder(w).Encode(&api.Job{ID: &jobID, Version: &version})
+		case "/v1/job/" + jobID + "/submission":
+			http.Error(w, "submission not found", http.StatusNotFound)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.GetJobSubmission(jobID)
+	if err == nil {
+		t.Error("GetJobSubmission() expected error when submission lookup fails, got nil")
+	}
+}
+
+func TestGetJobSubmission_NilVersion(t *testing.T) {
+	jobID := "test-job"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v1/job/" + jobID:
+			// Return a job without Version set (nil)
+			json.NewEncoder(w).Encode(&api.Job{ID: &jobID})
+		case "/v1/job/" + jobID + "/submission":
+			if r.URL.Query().Get("version") != "0" {
+				t.Errorf("submission version = %q, want %q", r.URL.Query().Get("version"), "0")
+			}
+			json.NewEncoder(w).Encode(&api.JobSubmission{
+				Source: `job "test" {}`,
+				Format: "hcl2",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	sub, err := c.GetJobSubmission(jobID)
+	if err != nil {
+		t.Fatalf("GetJobSubmission() error = %v", err)
+	}
+	if sub.Source != `job "test" {}` {
+		t.Errorf("Source = %q, want %q", sub.Source, `job "test" {}`)
+	}
+}
+
+func TestStopJob_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.StopJob("nonexistent", false)
+	if err == nil {
+		t.Error("StopJob() expected error on 500, got nil")
+	}
+}
+
+func TestWatchJobHealth_ErrorFromCheckHealth(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx := context.Background()
+
+	_, err := c.WatchJobHealth(ctx, "test-job")
+	if err == nil {
+		t.Error("WatchJobHealth() expected error when checkJobHealth fails, got nil")
+	}
+}
+
+func TestWatchJobHealth_NilDeploymentStatus(t *testing.T) {
+	callCount := 0
+	hTrue := true
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		callCount++
+		if callCount < 2 {
+			// First call: running but nil DeploymentStatus
+			json.NewEncoder(w).Encode([]*api.AllocationListStub{
+				{ID: "alloc-1", ClientStatus: "running", DeploymentStatus: nil},
+			})
+			return
+		}
+		// Second call: healthy
+		json.NewEncoder(w).Encode([]*api.AllocationListStub{
+			{
+				ID:               "alloc-1",
+				ClientStatus:     "running",
+				DeploymentStatus: &api.AllocDeploymentStatus{Healthy: &hTrue},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	healthy, err := c.WatchJobHealth(ctx, "test-job")
+	if err != nil {
+		t.Fatalf("WatchJobHealth() error = %v", err)
+	}
+	if !healthy {
+		t.Error("WatchJobHealth() = false, want true")
+	}
+}
+
+func TestWatchJobHealth_NilHealthyPointer(t *testing.T) {
+	callCount := 0
+	hTrue := true
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		callCount++
+		if callCount < 2 {
+			// First call: running with DeploymentStatus but nil Healthy pointer
+			json.NewEncoder(w).Encode([]*api.AllocationListStub{
+				{
+					ID:               "alloc-1",
+					ClientStatus:     "running",
+					DeploymentStatus: &api.AllocDeploymentStatus{Healthy: nil},
+				},
+			})
+			return
+		}
+		// Second call: healthy
+		json.NewEncoder(w).Encode([]*api.AllocationListStub{
+			{
+				ID:               "alloc-1",
+				ClientStatus:     "running",
+				DeploymentStatus: &api.AllocDeploymentStatus{Healthy: &hTrue},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	healthy, err := c.WatchJobHealth(ctx, "test-job")
+	if err != nil {
+		t.Fatalf("WatchJobHealth() error = %v", err)
+	}
+	if !healthy {
+		t.Error("WatchJobHealth() = false, want true")
+	}
+}
+
+func TestWatchJobHealth_UnhealthyDeployment(t *testing.T) {
+	hFalse := false
+	hTrue := true
+	callCount := 0
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		callCount++
+		if callCount < 2 {
+			json.NewEncoder(w).Encode([]*api.AllocationListStub{
+				{
+					ID:               "alloc-1",
+					ClientStatus:     "running",
+					DeploymentStatus: &api.AllocDeploymentStatus{Healthy: &hFalse},
+				},
+			})
+			return
+		}
+		json.NewEncoder(w).Encode([]*api.AllocationListStub{
+			{
+				ID:               "alloc-1",
+				ClientStatus:     "running",
+				DeploymentStatus: &api.AllocDeploymentStatus{Healthy: &hTrue},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	healthy, err := c.WatchJobHealth(ctx, "test-job")
+	if err != nil {
+		t.Fatalf("WatchJobHealth() error = %v", err)
+	}
+	if !healthy {
+		t.Error("WatchJobHealth() = false, want true")
+	}
+}
+
+func TestWatchJobHealth_LostAllocation(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]*api.AllocationListStub{
+			{ID: "alloc-1", ClientStatus: "lost"},
+		})
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx := context.Background()
+
+	_, err := c.WatchJobHealth(ctx, "test-job")
+	if err == nil {
+		t.Error("WatchJobHealth() expected error for all-lost allocations, got nil")
+	}
+}
+
+func TestNewClient(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	c, err := NewClient(srv.URL, "test-token", logger)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	if c == nil {
+		t.Fatal("NewClient() returned nil client")
+	}
+	if c.healthPollInterval != defaultHealthPollInterval {
+		t.Errorf("healthPollInterval = %v, want %v", c.healthPollInterval, defaultHealthPollInterval)
+	}
+}
+
 // strPtr is a test helper for *string literals.
 func strPtr(s string) *string { return &s }
