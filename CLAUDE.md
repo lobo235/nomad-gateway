@@ -32,11 +32,14 @@ A Go HTTP API server that wraps the Nomad API for an MCP server to manage homela
 ```
 nomad-gateway/
 ├── Dockerfile
+├── Makefile
 ├── go.mod / go.sum
 ├── .env.example              # dev template — never commit real values
 ├── .gitignore
+├── .golangci.yml             # strict linter config
 ├── CLAUDE.md                 # this file
 ├── README.md                 # operator/user documentation
+├── CHANGELOG.md
 ├── cmd/
 │   └── server/
 │       └── main.go           # entry point
@@ -45,12 +48,14 @@ nomad-gateway/
 │   └── nomad-gateway.policy.hcl     # Nomad ACL policy
 └── internal/
     ├── config/
-    │   └── config.go         # ENV var loading & validation
+    │   ├── config.go         # ENV var loading & validation
+    │   └── config_test.go
     ├── nomad/
     │   ├── client.go         # Nomad API wrapper
     │   └── client_test.go    # unit tests (mock httptest server)
     └── api/
         ├── server.go         # HTTP mux + Run()
+        ├── server_test.go    # handler tests via httptest
         ├── middleware.go     # Bearer token auth + request logging
         ├── handlers.go       # all route handlers
         ├── errors.go         # writeError / writeJSON helpers
