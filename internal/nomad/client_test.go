@@ -589,7 +589,7 @@ func TestWatchJobHealth_Timeout(t *testing.T) {
 	}
 }
 
-func TestWatchJobHealth_TerminalAlloc(t *testing.T) {
+func TestWatchJobHealth_AllTerminal(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]*api.AllocationListStub{
@@ -603,7 +603,30 @@ func TestWatchJobHealth_TerminalAlloc(t *testing.T) {
 
 	_, err := c.WatchJobHealth(ctx, "minecraft-survival")
 	if err == nil {
-		t.Error("WatchJobHealth() expected error for failed allocation, got nil")
+		t.Error("WatchJobHealth() expected error for all-terminal allocations, got nil")
+	}
+}
+
+func TestWatchJobHealth_TerminalPlusHealthy(t *testing.T) {
+	hTrue := true
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]*api.AllocationListStub{
+			{ID: "alloc-old", ClientStatus: "complete"},
+			{ID: "alloc-new", ClientStatus: "running", DeploymentStatus: &api.AllocDeploymentStatus{Healthy: &hTrue}},
+		})
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	ctx := context.Background()
+
+	healthy, err := c.WatchJobHealth(ctx, "minecraft-survival")
+	if err != nil {
+		t.Errorf("WatchJobHealth() unexpected error: %v", err)
+	}
+	if !healthy {
+		t.Error("WatchJobHealth() = false, want true (terminal skipped, running is healthy)")
 	}
 }
 

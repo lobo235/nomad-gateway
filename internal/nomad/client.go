@@ -281,8 +281,9 @@ func (c *Client) WatchJobHealth(ctx context.Context, jobID string) (bool, error)
 	}
 }
 
-// checkJobHealth returns true when the job has at least one allocation and all
-// allocations are running and healthy.
+// checkJobHealth returns true when the job has at least one running allocation
+// and all running allocations are healthy. Terminal allocations (complete,
+// failed, lost) are skipped — they are leftover from previous deployments.
 func (c *Client) checkJobHealth(jobID string) (bool, error) {
 	allocs, _, err := c.nomad.Jobs().Allocations(jobID, false, nil)
 	if err != nil {
@@ -293,10 +294,12 @@ func (c *Client) checkJobHealth(jobID string) (bool, error) {
 		return false, nil
 	}
 
+	runningCount := 0
 	for _, a := range allocs {
-		// Skip terminal allocations (failed, lost, complete) — only consider running ones
+		// Skip terminal allocations — they are from previous deployments.
 		if a.ClientStatus == "complete" || a.ClientStatus == "failed" || a.ClientStatus == "lost" {
-			return false, fmt.Errorf("job %q has a terminal allocation (status: %s)", jobID, a.ClientStatus)
+			c.log.Debug("skipping terminal allocation", "job_id", jobID, "alloc_id", a.ID, "status", a.ClientStatus)
+			continue
 		}
 		if a.ClientStatus != "running" {
 			c.log.Debug("allocation not yet running", "job_id", jobID, "alloc_id", a.ID, "status", a.ClientStatus)
@@ -311,6 +314,11 @@ func (c *Client) checkJobHealth(jobID string) (bool, error) {
 				"has_deployment_status", a.DeploymentStatus != nil)
 			return false, nil
 		}
+		runningCount++
+	}
+
+	if runningCount == 0 {
+		return false, fmt.Errorf("job %q has no running allocations (all terminal)", jobID)
 	}
 
 	return true, nil

@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.1] - 2026-03-24
+
 ### Fixed
+- Health check (`watch_job_health`) now skips terminal allocations (complete, failed, lost) instead of returning an error — fixes false failures on jobs with leftover allocations from previous deployments
 - Correct Vault secret path in deploy spec to use `kv/data/nomad/default/nomad-gateway`
 
 ### Changed
