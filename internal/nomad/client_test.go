@@ -161,7 +161,7 @@ func TestGetAllocInfo(t *testing.T) {
 			AllocatedResources: &api.AllocatedResources{
 				Shared: api.AllocatedSharedResources{
 					Ports: []api.PortMapping{
-						{Label: "minecraft", Value: 25565, To: 25565, HostIP: "192.168.1.5"},
+						{Label: "minecraft", Value: 25565, To: 25565, HostIP: "198.51.100.1"},
 					},
 				},
 			},

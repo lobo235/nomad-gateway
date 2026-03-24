@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.3] - 2026-03-24
+
+### Fixed
+- Replace private IP in test code with RFC 5737 documentation range address
+- Update stale version in README health check example
+
 ## [v1.2.2] - 2026-03-24
 
 ### Changed
