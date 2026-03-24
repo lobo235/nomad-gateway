@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.2] - 2026-03-24
+
+### Changed
+- Health check response includes descriptive status string ("all allocations running and healthy") instead of empty string
+
 ## [v1.2.1] - 2026-03-24
 
 ### Fixed

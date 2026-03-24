@@ -298,6 +298,7 @@ func (s *Server) getLogsHandler() http.HandlerFunc {
 type jobHealthResponse struct {
 	JobID   string `json:"job_id"`
 	Healthy bool   `json:"healthy"`
+	Status  string `json:"status"`
 }
 
 // watchJobHealthHandler handles GET /jobs/{jobID}/health?timeout=<duration>
@@ -334,6 +335,6 @@ func (s *Server) watchJobHealthHandler() http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, jobHealthResponse{JobID: jobID, Healthy: true})
+		writeJSON(w, http.StatusOK, jobHealthResponse{JobID: jobID, Healthy: true, Status: "all allocations running and healthy"})
 	}
 }
