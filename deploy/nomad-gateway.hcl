@@ -53,7 +53,7 @@ job "nomad-gateway" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/lobo235/nomad-gateway:latest"
+        image = "gitea.big.netlobo.com/netlobo/nomad-gateway:latest"
         ports = ["http"]
       }
 
