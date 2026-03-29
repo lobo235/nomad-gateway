@@ -73,6 +73,12 @@ EOF
         PORT       = "8080"
       }
 
+
+      template {
+        data        = "{{ with nomadVar \"nomad/jobs/nomad-gateway\" }}{{ .image_digest }}{{ end }}"
+        destination = "local/deploy-trigger"
+        change_mode = "restart"
+      }
       resources {
         cpu    = 500
         memory = 256
