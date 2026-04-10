@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.5] - 2026-04-09
+
+### Added
+- Gitea Actions Docker workflow for CI/CD
+- `make deploy` Makefile target
+- Auto-deploy via Nomad Variables
+
+### Changed
+- Switch container registry to Gitea
+- Update README version and add missing files to CLAUDE.md layout
+
+## [v1.2.4] - 2026-03-24
+
+### Added
+- `grep` query parameter on log endpoint for server-side log filtering
+
+### Changed
+- Expanded API and Nomad client test coverage
+
 ## [v1.2.3] - 2026-03-24
 
 ### Fixed
