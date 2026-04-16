@@ -192,10 +192,10 @@ git tag v1.2.3 && git push origin v1.2.3
 ```
 
 This triggers the Docker workflow, which builds and pushes:
-- `gitea.example.com/example/nomad-gateway:v1.2.3`
-- `gitea.example.com/example/nomad-gateway:v1.2`
-- `gitea.example.com/example/nomad-gateway:latest`
-- `gitea.example.com/example/nomad-gateway:<short-sha>`
+- `gitea.example.com/netlobo/nomad-gateway:v1.2.3`
+- `gitea.example.com/netlobo/nomad-gateway:v1.2`
+- `gitea.example.com/netlobo/nomad-gateway:latest`
+- `gitea.example.com/netlobo/nomad-gateway:<short-sha>`
 
 The version is embedded in the binary via `-ldflags "-X main.version=v1.2.3"` and returned by `GET /health`.
 

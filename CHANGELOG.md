@@ -7,14 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `force_pull = true` in Nomad job spec Docker config
+- `update` stanza in Nomad job spec with health checks and auto-revert
+
 ### Changed
 - Dockerfile: run as non-root user (appuser, uid 1000) for container security
-- Makefile: build output to `bin/` directory instead of repo root
-- `.gitignore`: scope build artifact pattern to `/bin/`, add common secrets patterns
-- Gitea CI: merge Docker workflow into single `ci.yml` with lint, test, build gates; add Buildx layer caching
-- GitHub CI: add lint job using `golangci-lint-action`
-- Nomad job spec: add `update` stanza with health checks and auto-revert; add `force_pull = true`
-- Replace real infrastructure hostnames with `example.com` placeholders in committed files
+- Build output now goes to `bin/` directory instead of repo root
+- `make clean` removes `bin/` directory instead of a bare binary
+- `.gitignore` patterns scoped to repo root with leading `/` to prevent overbroad matching
+- Registry hostname in deploy spec, CLAUDE.md, and Gitea workflow replaced with `gitea.example.com` placeholder / `${{ secrets.REGISTRY_HOST }}`
 
 ## [v1.3.0] - 2026-04-15
 

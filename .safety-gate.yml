@@ -1,2 +1,0 @@
-allow:
-  - git\s+config\s+core\.hooksPath

@@ -61,7 +61,7 @@ job "nomad-gateway" {
       driver = "docker"
 
       config {
-        image      = "gitea.example.com/example/nomad-gateway:latest"
+        image      = "gitea.example.com/netlobo/nomad-gateway:latest"
         force_pull = true
         ports      = ["http"]
       }
