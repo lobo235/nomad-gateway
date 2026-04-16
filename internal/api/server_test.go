@@ -31,6 +31,7 @@ type mockNomad struct {
 	getJobFunc         func(jobID string) (*nomadapi.Job, error)
 	getJobSubFunc      func(jobID string) (*nomadapi.JobSubmission, error)
 	submitJobFunc      func(hclSpec string) (*nomadapi.JobRegisterResponse, error)
+	planJobFunc        func(hclSpec string) (*nomadapi.JobPlanResponse, error)
 	stopJobFunc        func(jobID string, purge bool) (*nomad.StopJobResponse, error)
 	getAllocInfoFunc   func(allocID string) (*nomadapi.Allocation, error)
 	restartAllocFunc   func(allocID, taskName string) error
@@ -71,6 +72,12 @@ func (m *mockNomad) GetJobSubmission(jobID string) (*nomadapi.JobSubmission, err
 func (m *mockNomad) SubmitJob(hclSpec string) (*nomadapi.JobRegisterResponse, error) {
 	if m.submitJobFunc != nil {
 		return m.submitJobFunc(hclSpec)
+	}
+	return nil, nil
+}
+func (m *mockNomad) PlanJob(hclSpec string) (*nomadapi.JobPlanResponse, error) {
+	if m.planJobFunc != nil {
+		return m.planJobFunc(hclSpec)
 	}
 	return nil, nil
 }
@@ -872,6 +879,57 @@ func TestGetLogs_InvalidLimitNotANumber(t *testing.T) {
 	resp := doRequest(t, http.MethodGet, srv.URL+"/jobs/my-job/allocations/alloc-1/logs?task=web&limit=abc", "", authHeader())
 	assertStatus(t, resp, http.StatusBadRequest)
 	assertErrorCode(t, resp, "invalid_param")
+}
+
+// --- POST /jobs/plan ---
+
+func TestPlanJob_EmptyBody(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{})
+	defer srv.Close()
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/jobs/plan", bytes.NewBufferString(""))
+	req.Header.Set("Authorization", authHeader())
+	resp, _ := http.DefaultClient.Do(req)
+	assertStatus(t, resp, http.StatusBadRequest)
+	assertErrorCode(t, resp, "empty_body")
+}
+
+func TestPlanJob_OK(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		planJobFunc: func(hclSpec string) (*nomadapi.JobPlanResponse, error) {
+			return &nomadapi.JobPlanResponse{
+				Warnings:       "some warning",
+				JobModifyIndex: 42,
+			}, nil
+		},
+	})
+	defer srv.Close()
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/jobs/plan", bytes.NewBufferString(`job "test" {}`))
+	req.Header.Set("Authorization", authHeader())
+	resp, _ := http.DefaultClient.Do(req)
+	assertStatus(t, resp, http.StatusOK)
+
+	var body nomadapi.JobPlanResponse
+	json.NewDecoder(resp.Body).Decode(&body)
+	if body.JobModifyIndex != 42 {
+		t.Errorf("JobModifyIndex = %d, want 42", body.JobModifyIndex)
+	}
+	if body.Warnings != "some warning" {
+		t.Errorf("Warnings = %q, want 'some warning'", body.Warnings)
+	}
+}
+
+func TestPlanJob_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		planJobFunc: func(hclSpec string) (*nomadapi.JobPlanResponse, error) {
+			return nil, errors.New("parse error")
+		},
+	})
+	defer srv.Close()
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/jobs/plan", bytes.NewBufferString(`job "test" {}`))
+	req.Header.Set("Authorization", authHeader())
+	resp, _ := http.DefaultClient.Do(req)
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
 }
 
 // --- DELETE /jobs/{jobID} default purge ---

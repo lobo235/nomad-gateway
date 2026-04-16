@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.3.0] - 2026-04-15
+
+### Added
+- `POST /jobs/plan` endpoint — dry-run a job spec to preview changes (diff, warnings, failed allocations) without registering
+
 ## [v1.2.5] - 2026-04-09
 
 ### Added

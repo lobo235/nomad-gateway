@@ -80,6 +80,31 @@ func (s *Server) submitJobHandler() http.HandlerFunc {
 	}
 }
 
+// planJobHandler handles POST /jobs/plan
+// Request body: raw HCL job spec (same format as POST /jobs)
+// Returns the plan diff showing what would change without actually registering the job.
+func (s *Server) planJobHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1 MiB limit
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "read_error", "failed to read request body")
+			return
+		}
+		if len(body) == 0 {
+			writeError(w, http.StatusBadRequest, "empty_body", "request body must contain an HCL job spec")
+			return
+		}
+
+		resp, err := s.nomad.PlanJob(string(body))
+		if err != nil {
+			s.log.Error("plan job failed", "error", err)
+			writeError(w, http.StatusBadGateway, "nomad_error", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, resp)
+	}
+}
+
 // stopJobHandler handles DELETE /jobs/{jobID}?purge=<bool>
 func (s *Server) stopJobHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

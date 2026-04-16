@@ -1057,5 +1057,58 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestPlanJob(t *testing.T) {
+	jobID := "test-job"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v1/jobs/parse":
+			json.NewEncoder(w).Encode(&api.Job{ID: &jobID})
+		case "/v1/job/" + jobID + "/plan":
+			if r.Method != http.MethodPut {
+				t.Errorf("method = %s, want PUT", r.Method)
+			}
+			json.NewEncoder(w).Encode(&api.JobPlanResponse{
+				JobModifyIndex: 99,
+				Warnings:       "test warning",
+			})
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	resp, err := c.PlanJob(`job "test-job" {}`)
+	if err != nil {
+		t.Fatalf("PlanJob() error = %v", err)
+	}
+	if resp.JobModifyIndex != 99 {
+		t.Errorf("JobModifyIndex = %d, want 99", resp.JobModifyIndex)
+	}
+	if resp.Warnings != "test warning" {
+		t.Errorf("Warnings = %q, want 'test warning'", resp.Warnings)
+	}
+}
+
+func TestPlanJob_ParseError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/jobs/parse" {
+			http.Error(w, "invalid HCL", http.StatusBadRequest)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(t, srv.URL)
+	_, err := c.PlanJob("not valid hcl")
+	if err == nil {
+		t.Error("PlanJob() expected error for invalid HCL, got nil")
+	}
+}
+
 // strPtr is a test helper for *string literals.
 func strPtr(s string) *string { return &s }

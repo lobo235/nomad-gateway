@@ -103,6 +103,21 @@ func (c *Client) SubmitJob(hclSpec string) (*api.JobRegisterResponse, error) {
 	return resp, nil
 }
 
+// PlanJob parses a raw HCL job spec and runs a plan (dry-run) against Nomad,
+// returning the diff, warnings, and modify index without registering the job.
+func (c *Client) PlanJob(hclSpec string) (*api.JobPlanResponse, error) {
+	job, err := c.nomad.Jobs().ParseHCL(hclSpec, true)
+	if err != nil {
+		return nil, fmt.Errorf("parsing job HCL: %w", err)
+	}
+
+	resp, _, err := c.nomad.Jobs().Plan(job, true, nil)
+	if err != nil {
+		return nil, fmt.Errorf("planning job: %w", err)
+	}
+	return resp, nil
+}
+
 // GetAllocInfo returns full details for a single allocation, including
 // allocated ports and task states.
 func (c *Client) GetAllocInfo(allocID string) (*api.Allocation, error) {

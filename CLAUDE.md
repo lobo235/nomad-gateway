@@ -103,6 +103,7 @@ All routes except `/health` require `Authorization: Bearer <GATEWAY_API_KEY>`.
 | `GET` | `/jobs/{jobID}` | |
 | `GET` | `/jobs/{jobID}/spec` | Returns original HCL/JSON submission (Nomad 1.6+) |
 | `POST` | `/jobs` | Body: raw HCL; preserves original HCL in Nomad via `RegisterOpts` |
+| `POST` | `/jobs/plan` | Body: raw HCL; dry-run returning diff, warnings, and allocation info |
 | `DELETE` | `/jobs/{jobID}` | `?purge=true\|false` (default false) |
 | `GET` | `/jobs/{jobID}/health` | `?timeout=<go-duration>` (default 5m); blocks until healthy or timeout |
 | `GET` | `/jobs/{jobID}/evaluations` | |

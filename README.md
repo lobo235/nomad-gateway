@@ -115,6 +115,19 @@ curl -X POST -H "Authorization: Bearer $KEY" \
 
 Returns the Nomad register response including `eval_id`.
 
+#### `POST /jobs/plan`
+
+Dry-runs a job spec without registering it. Returns a diff showing what would change, warnings, and any failed task group allocations. Body must be a raw HCL job spec (same format as `POST /jobs`).
+
+```bash
+curl -X POST -H "Authorization: Bearer $KEY" \
+  -H "Content-Type: text/plain" \
+  --data-binary @my-job.hcl \
+  http://localhost:8080/jobs/plan
+```
+
+Returns the Nomad plan response including `Diff`, `Warnings`, `FailedTGAllocs`, and `JobModifyIndex`.
+
 #### `DELETE /jobs/{jobID}`
 
 Stops (deregisters) a job. Add `?purge=true` to fully remove it from Nomad.
