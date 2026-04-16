@@ -1,8 +1,14 @@
 # Secrets
 .env
+.env.*
+*.key
+*.pem
+credentials.json
+secrets.yml
+*.secret
 
 # Build output
-nomad-gateway
+/bin/
 /dist/
 
 # Go

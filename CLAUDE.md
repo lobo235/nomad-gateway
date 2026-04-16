@@ -20,7 +20,8 @@ A Go HTTP API server that wraps the Nomad API for an MCP server to manage homela
 ~/bin/go/bin/go run ./cmd/server
 
 # Build a binary
-~/bin/go/bin/go build -o nomad-gateway ./cmd/server
+make build
+# Binary is output to bin/nomad-gateway
 ```
 
 > Go is installed at `~/bin/go/bin/go` (Go 1.26.1). It is also on `$PATH` via `.bashrc`.
@@ -191,10 +192,10 @@ git tag v1.2.3 && git push origin v1.2.3
 ```
 
 This triggers the Docker workflow, which builds and pushes:
-- `gitea.big.netlobo.com/netlobo/nomad-gateway:v1.2.3`
-- `gitea.big.netlobo.com/netlobo/nomad-gateway:v1.2`
-- `gitea.big.netlobo.com/netlobo/nomad-gateway:latest`
-- `gitea.big.netlobo.com/netlobo/nomad-gateway:<short-sha>`
+- `gitea.example.com/example/nomad-gateway:v1.2.3`
+- `gitea.example.com/example/nomad-gateway:v1.2`
+- `gitea.example.com/example/nomad-gateway:latest`
+- `gitea.example.com/example/nomad-gateway:<short-sha>`
 
 The version is embedded in the binary via `-ldflags "-X main.version=v1.2.3"` and returned by `GET /health`.
 

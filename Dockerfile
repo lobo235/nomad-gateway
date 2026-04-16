@@ -13,10 +13,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X main.version=
 
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates \
+    && adduser -D -u 1000 appuser
 
 WORKDIR /app
 COPY --from=builder /build/nomad-gateway .
+
+USER appuser
 
 EXPOSE 8080
 

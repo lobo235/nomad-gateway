@@ -335,7 +335,7 @@ nomad acl token create -name="nomad-gateway-token" -policy="nomad-gateway"
 
 ## Releases
 
-This project uses [Semantic Versioning](https://semver.org/). Docker images are published to `ghcr.io/lobo235/nomad-gateway` on every push to `main` (`latest` + short SHA) and on every `v*` tag (`v1.2.3`, `v1.2`, `latest`).
+This project uses [Semantic Versioning](https://semver.org/). Docker images are published to the container registry on every push to `main` (`latest` + short SHA) and on every `v*` tag (`v1.2.3`, `v1.2`, `latest`).
 
 The running version is always visible via `GET /health`.
 
