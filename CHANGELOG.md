@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.3.1] - 2026-04-16
+
+### Added
+- `force_pull = true` in Nomad job spec Docker config
+- `update` stanza in Nomad job spec with health checks and auto-revert
+
+### Changed
+- Dockerfile: run as non-root user (appuser, uid 1000) for container security
+- Build output now goes to `bin/` directory instead of repo root
+- `make clean` removes `bin/` directory instead of a bare binary
+- `.gitignore` patterns scoped to repo root with leading `/` to prevent overbroad matching
+- Registry hostname in deploy spec, CLAUDE.md, and Gitea workflow replaced with `gitea.example.com` placeholder / `${{ secrets.REGISTRY_HOST }}`
+
 ## [v1.3.0] - 2026-04-15
 
 ### Added

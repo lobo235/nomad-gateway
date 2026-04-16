@@ -3,6 +3,14 @@ job "nomad-gateway" {
   datacenters = ["dc1"]
   type        = "service"
 
+  update {
+    max_parallel     = 1
+    health_check     = "checks"
+    min_healthy_time = "10s"
+    healthy_deadline = "5m"
+    auto_revert      = true
+  }
+
   group "nomad-gateway" {
     count = 1
 
@@ -53,8 +61,9 @@ job "nomad-gateway" {
       driver = "docker"
 
       config {
-        image = "gitea.big.netlobo.com/netlobo/nomad-gateway:latest"
-        ports = ["http"]
+        image      = "gitea.example.com/netlobo/nomad-gateway:latest"
+        force_pull = true
+        ports      = ["http"]
       }
 
       template {
@@ -73,12 +82,12 @@ EOF
         PORT       = "8080"
       }
 
-
       template {
         data        = "{{ with nomadVar \"nomad/jobs/nomad-gateway\" }}{{ .image_digest }}{{ end }}"
         destination = "local/deploy-trigger"
         change_mode = "restart"
       }
+
       resources {
         cpu    = 500
         memory = 256
