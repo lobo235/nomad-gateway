@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.3.2] - 2026-04-16
+
+### Fixed
+- Restore hardcoded `REGISTRY: gitea.big.netlobo.com` env var in Gitea Docker workflow. The v1.3.1 scrub to `${{ secrets.REGISTRY_HOST }}` broke CI because that secret is not configured (only `REGISTRY_USER`, `REGISTRY_TOKEN`, `NOMAD_TOKEN`, `NOMAD_ADDR` are inherited at the org level). Per platform convention, the Gitea hostname is public and belongs in the workflow env block.
+
 ## [v1.3.1] - 2026-04-16
 
 ### Added
