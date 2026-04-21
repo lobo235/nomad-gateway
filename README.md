@@ -144,6 +144,17 @@ curl -X DELETE -H "Authorization: Bearer $KEY" \
 
 Returns `{"eval_id": "..."}`.
 
+#### `POST /jobs/{jobID}/periodic/force`
+
+Triggers an immediate run of a periodic (cron-scheduled) job. `jobID` must be the periodic parent; Nomad generates a dispatched child with the usual `<parent>/periodic-<unix-ts>` naming convention.
+
+```bash
+curl -X POST -H "Authorization: Bearer $KEY" \
+  http://localhost:8080/jobs/nightly-report/periodic/force
+```
+
+Returns `{"eval_id": "..."}` with the evaluation ID Nomad scheduled for the newly dispatched child.
+
 #### `GET /jobs/{jobID}/health`
 
 Blocks until all allocations for the job are running and `DeploymentStatus.Healthy == true`, or the timeout is reached.

@@ -33,6 +33,7 @@ type mockNomad struct {
 	submitJobFunc      func(hclSpec string) (*nomadapi.JobRegisterResponse, error)
 	planJobFunc        func(hclSpec string) (*nomadapi.JobPlanResponse, error)
 	stopJobFunc        func(jobID string, purge bool) (*nomad.StopJobResponse, error)
+	forcePeriodicFunc  func(jobID string) (*nomad.ForcePeriodicResponse, error)
 	getAllocInfoFunc   func(allocID string) (*nomadapi.Allocation, error)
 	restartAllocFunc   func(allocID, taskName string) error
 	getJobVersionsFunc func(jobID string) ([]*nomadapi.Job, error)
@@ -86,6 +87,12 @@ func (m *mockNomad) StopJob(jobID string, purge bool) (*nomad.StopJobResponse, e
 		return m.stopJobFunc(jobID, purge)
 	}
 	return &nomad.StopJobResponse{}, nil
+}
+func (m *mockNomad) ForcePeriodic(jobID string) (*nomad.ForcePeriodicResponse, error) {
+	if m.forcePeriodicFunc != nil {
+		return m.forcePeriodicFunc(jobID)
+	}
+	return &nomad.ForcePeriodicResponse{}, nil
 }
 func (m *mockNomad) GetAllocInfo(allocID string) (*nomadapi.Allocation, error) {
 	if m.getAllocInfoFunc != nil {
@@ -353,6 +360,52 @@ func TestStopJob_OK(t *testing.T) {
 	if !gotPurge {
 		t.Error("expected purge=true to be passed to StopJob")
 	}
+}
+
+// --- POST /jobs/{jobID}/periodic/force ---
+
+func TestForcePeriodic_OK(t *testing.T) {
+	var gotJobID string
+	srv := newTestServer(t, &mockNomad{
+		forcePeriodicFunc: func(jobID string) (*nomad.ForcePeriodicResponse, error) {
+			gotJobID = jobID
+			return &nomad.ForcePeriodicResponse{EvalID: "eval-periodic-1"}, nil
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodPost, srv.URL+"/jobs/my-periodic/periodic/force", "", authHeader())
+	assertStatus(t, resp, http.StatusOK)
+	if gotJobID != "my-periodic" {
+		t.Errorf("job_id = %q, want my-periodic", gotJobID)
+	}
+	var body struct {
+		EvalID string `json:"eval_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.EvalID != "eval-periodic-1" {
+		t.Errorf("eval_id = %q, want eval-periodic-1", body.EvalID)
+	}
+}
+
+func TestForcePeriodic_UpstreamError(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{
+		forcePeriodicFunc: func(jobID string) (*nomad.ForcePeriodicResponse, error) {
+			return nil, errors.New("job is not periodic")
+		},
+	})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodPost, srv.URL+"/jobs/my-job/periodic/force", "", authHeader())
+	assertStatus(t, resp, http.StatusBadGateway)
+	assertErrorCode(t, resp, "nomad_error")
+}
+
+func TestForcePeriodic_Unauthorized(t *testing.T) {
+	srv := newTestServer(t, &mockNomad{})
+	defer srv.Close()
+	resp := doRequest(t, http.MethodPost, srv.URL+"/jobs/my-job/periodic/force", "", "")
+	assertStatus(t, resp, http.StatusUnauthorized)
 }
 
 // --- POST /jobs/{jobID}/revert ---

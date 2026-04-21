@@ -263,6 +263,24 @@ type StopJobResponse struct {
 	EvalID string `json:"eval_id"`
 }
 
+// ForcePeriodicResponse holds the result of a periodic-force operation.
+// EvalID is the evaluation ID scheduled for the immediately-dispatched child.
+type ForcePeriodicResponse struct {
+	EvalID string `json:"eval_id"`
+}
+
+// ForcePeriodic forces an immediate run of a periodic job. The supplied jobID
+// must be the periodic parent ID; Nomad generates a dispatched child with the
+// usual "<parent>/periodic-<ts>" naming convention and returns the eval ID for
+// the new child.
+func (c *Client) ForcePeriodic(jobID string) (*ForcePeriodicResponse, error) {
+	evalID, _, err := c.nomad.Jobs().PeriodicForce(jobID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("forcing periodic job %q: %w", jobID, err)
+	}
+	return &ForcePeriodicResponse{EvalID: evalID}, nil
+}
+
 // StopJob deregisters a job. If purge is true, the job is fully removed from Nomad.
 func (c *Client) StopJob(jobID string, purge bool) (*StopJobResponse, error) {
 	evalID, _, err := c.nomad.Jobs().Deregister(jobID, purge, nil)

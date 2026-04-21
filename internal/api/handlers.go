@@ -130,6 +130,23 @@ func (s *Server) stopJobHandler() http.HandlerFunc {
 	}
 }
 
+// forcePeriodicHandler handles POST /jobs/{jobID}/periodic/force
+// Triggers an immediate run of a periodic (cron-scheduled) job. jobID must
+// be the periodic parent; Nomad generates a dispatched child and returns the
+// scheduling eval ID.
+func (s *Server) forcePeriodicHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		jobID := r.PathValue("jobID")
+		resp, err := s.nomad.ForcePeriodic(jobID)
+		if err != nil {
+			s.log.Error("force periodic failed", "job_id", jobID, "error", err)
+			writeError(w, http.StatusBadGateway, "nomad_error", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, resp)
+	}
+}
+
 // getAllocInfoHandler handles GET /jobs/{jobID}/allocations/{allocID}
 func (s *Server) getAllocInfoHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

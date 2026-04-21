@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.0] - 2026-04-20
+
+### Added
+- `POST /jobs/{jobID}/periodic/force` — trigger an immediate run of a periodic (cron-scheduled) job. `jobID` must be the periodic parent; Nomad generates a dispatched child with the usual `<parent>/periodic-<unix-ts>` naming. Response is `{"eval_id": "..."}` carrying the evaluation ID Nomad scheduled for the new child.
+
+### Fixed
+- `--version` (and `-version`, `-v`) now prints `nomad-gateway version <semver> <os>/<arch>` and exits before any config loading. Previously the flag was ignored and the binary fell through to config validation, which aborted with `NOMAD_ADDR is required` when env vars were absent.
+
 ## [v1.3.3] - 2026-04-16
 
 ### Changed

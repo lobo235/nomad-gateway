@@ -22,6 +22,7 @@ type nomadClient interface {
 	SubmitJob(hclSpec string) (*nomadapi.JobRegisterResponse, error)
 	PlanJob(hclSpec string) (*nomadapi.JobPlanResponse, error)
 	StopJob(jobID string, purge bool) (*nomad.StopJobResponse, error)
+	ForcePeriodic(jobID string) (*nomad.ForcePeriodicResponse, error)
 	GetAllocInfo(allocID string) (*nomadapi.Allocation, error)
 	RestartAlloc(allocID, taskName string) error
 	GetJobVersions(jobID string) ([]*nomadapi.Job, error)
@@ -77,6 +78,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /jobs/plan", auth(http.HandlerFunc(s.planJobHandler())))
 	mux.Handle("POST /jobs", auth(http.HandlerFunc(s.submitJobHandler())))
 	mux.Handle("DELETE /jobs/{jobID}", auth(http.HandlerFunc(s.stopJobHandler())))
+	mux.Handle("POST /jobs/{jobID}/periodic/force", auth(http.HandlerFunc(s.forcePeriodicHandler())))
 	mux.Handle("GET /jobs/{jobID}/health", auth(http.HandlerFunc(s.watchJobHealthHandler())))
 
 	return requestLogger(s.log)(mux)
